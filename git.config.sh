@@ -1,2 +1,2 @@
-git config remote.origin.pushurl git@github.com:kenthauser/mezzanine
-git config remote.upstream.url git://github.com/stephenmcd/mezzanine
+git remote set-url origin --push git@github.com:kenthauser/mezzanine
+git remote add -t master upstream git://github.com/stephenmcd/mezzanine
