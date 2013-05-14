@@ -1,0 +1,9 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant::Config.run do |config|
+  config.vm.box = "%(vagrant_box)s"
+  config.vm.forward_port 80,%(vagrant_http)s
+  config.vm.forward_port 443,%(vagrant_ssl)s
+  config.ssh.forward_agent = true
+end

@@ -7,6 +7,7 @@ from glob import glob
 from contextlib import contextmanager
 
 from fabric.api import env, cd, prefix, sudo as _sudo, run as _run, hide, task
+from fabric.api import local, execute
 from fabric.contrib.files import exists, upload_template
 from fabric.colors import yellow, green, blue, red
 
@@ -21,7 +22,7 @@ if sys.argv[0].split(os.sep)[-1] == "fab":
     try:
         conf = __import__("settings", globals(), locals(), [], 0).FABRIC
         try:
-            conf["HOSTS"][0]
+            conf.get("USE_VAGRANT") or conf["HOSTS"][0]
         except (KeyError, ValueError):
             raise ImportError
     except (ImportError, AttributeError):
@@ -49,6 +50,11 @@ env.reqs_path = conf.get("REQUIREMENTS_PATH", None)
 env.gunicorn_port = conf.get("GUNICORN_PORT", 8000)
 env.locale = conf.get("LOCALE", "en_US.UTF-8")
 
+# updates for vagrant support
+env.vagrant_pending = conf.get("USE_VAGRANT")
+env.vagrant_box = conf.get("VAGRANT_BASE", "precise32")
+env.vagrant_http = conf.get("VAGRANT_HTTP", "8080")
+env.vagrant_ssl = conf.get("VAGRANT_SSL", "8443")
 
 ##################
 # Template setup #
@@ -139,6 +145,148 @@ def update_changed_requirements():
         pip("-r %s/%s" % (env.proj_path, env.reqs_path))
 
 
+######################
+# Vagrant support
+######################
+
+def vagrant_task(func):
+    """
+    Decorator for the `fabric` `task` decorator which
+    brings up `vagrant` instance as required
+    """
+    @wraps(func)
+    def decorator(fn, *args, **kwargs):
+        @wraps(fn)
+        def start_vagrant(*a, **kw):
+            if env.vagrant_pending:
+                env.vagrant_pending = False
+                vagrant_up()
+                kw.update(hosts=env.hosts)
+                return execute(fn, *a, **kw)
+            return fn(*a, **kw)
+        return func(start_vagrant)
+    if env.vagrant_pending:
+        env.hosts = ['*vagrant*']
+    return decorator
+
+task_bare = task
+task = vagrant_task(task)
+
+# utility functions to perform Vagrant funtions
+
+def vagrant_is_running():
+    """
+    Return `True` if vagrant instance is running
+    """
+    status = vagrant_get_status_dict()
+    return status and status.popitem()[1].startswith('running')
+
+def vagrant_up():
+    """
+    Start vagrant machine if not running
+    Update env to point at vagrant instance
+    """
+
+    if not vagrant_is_running():
+        vagrant_init()
+        with hide('running'):
+            local('vagrant up')
+
+    # update env to point at vagrant instance
+    vagrant_ssh = vagrant_get_ssh_config()
+    env.user = vagrant_ssh['User']
+    env.hosts = ['%(HostName)s:%(Port)s' % vagrant_ssh]
+    env.key_filename = vagrant_ssh['IdentityFile']
+    env.forward_agent = True
+    env.disable_known_hosts = True
+
+
+def vagrant_down():
+    """
+    Stop vagrant machine if defined
+    """
+    with hide('running'):
+        local('vagrant halt')
+
+VAGRANTFILE = "Vagrantfile"
+
+def vagrant_init():
+    """
+    Create Vagrantfile from prototype if required
+    """
+
+    if os.path.exists(VAGRANTFILE):
+        return
+
+    vagrant_proto = os.path.join("deploy", VAGRANTFILE)
+    with open(VAGRANTFILE, 'w') as f:
+        f.write(open(vagrant_proto).read() % env)
+
+def vagrant_destroy():
+    """
+    Remove vagrant instance
+    """
+    if os.path.exists(VAGRANTFILE):
+        with hide('running'):
+            local('vagrant destroy -f')
+        os.unlink(VAGRANTFILE)
+
+def vagrant_get_ssh_config(host=None):
+        """
+        Parse vagrant configuration and return as
+        dict of ssh parameters and their values
+        """
+        import subprocess
+
+        cmd = ['vagrant', 'ssh-config']
+        if host: cmd.append(host)
+        result = subprocess.check_output(cmd)
+
+        # convert text to dict
+        status = {}
+        for line in result.splitlines():
+            k,v = line.split(None, 1)
+            if v[0] in '\'"' and v[0] == v[-1]:
+                v = v[1:-1]
+            status[k] = v
+        return status
+
+def vagrant_get_status_dict():
+    """Return status of vagrant machine(s) as dictonary"""
+
+    # The 'vagrant status' command returns a human-readable message.
+    # In the case we're interested in, there is a premable, a blank line,
+    # a list of "hostname, status" lines (one per machine), a second
+    # blank line and then more text. Filter this into a dictionary
+    # with status keyed by hostname.
+    #
+    # all other "status" message formats basically mean all hosts down,
+    # so return an empty dictionary.
+
+    # create empty dictionary of machine states & then collect vagrant's thoughts
+    import subprocess
+
+    status = {}
+    try:
+        with open(os.devnull) as devnull:
+            result = subprocess.check_output(['vagrant', 'status'],
+                                             stderr=devnull)
+    except subprocess.CalledProcessError:
+        return {}
+
+    # find first blank line
+    i = iter(result.splitlines())
+    while next(i): pass
+
+    # next lines have machine name + status
+    for line in i:
+        # blank line marks end of machine state list
+        if not line: break
+        status.update([line.split(None, 1)])
+
+    return status
+
+
 ###########################################
 # Utils and wrappers for various commands #
 ###########################################
@@ -150,8 +298,8 @@ def _print(output):
 
 
 def print_command(command):
-    _print(blue("$ ", bold=True) +
-           yellow(command, bold=True) +
+    _print(yellow("$ ", bold=True) +
+           blue(command, bold=True) +
            red(" ->", bold=True))
 
 
@@ -524,3 +672,14 @@ def all():
     install()
     if create():
         deploy()
+
+
+if env.vagrant_pending:
+    @task_bare
+    @log_call
+    def destroy():
+        """
+        Destroy vagrant instance
+        """
+        vagrant_destroy()
+
