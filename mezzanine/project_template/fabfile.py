@@ -20,7 +20,9 @@ conf = {}
 if sys.argv[0].split(os.sep)[-1] == "fab":
     # Ensure we import settings from the current dir
     try:
-        conf = __import__("settings", globals(), locals(), [], 0).FABRIC
+        dj_settings = __import__("settings", globals(), locals(), [], 0)
+	conf = dj_settings.FABRIC
+	settings_dir = os.path.dirname(dj_settings.__file__)
         try:
             conf.get("USE_VAGRANT") or conf["HOSTS"][0]
         except (KeyError, ValueError):
@@ -51,6 +53,7 @@ env.gunicorn_port = conf.get("GUNICORN_PORT", 8000)
 env.locale = conf.get("LOCALE", "en_US.UTF-8")
 
 # updates for vagrant support
+env.deploy = os.path.join(settings_dir, "deploy")
 env.vagrant_pending = conf.get("USE_VAGRANT")
 env.vagrant_box = conf.get("VAGRANT_BASE", "precise32")
 env.vagrant_http = conf.get("VAGRANT_HTTP", "8080")
@@ -66,27 +69,27 @@ env.vagrant_ssl = conf.get("VAGRANT_SSL", "8443")
 
 templates = {
     "nginx": {
-        "local_path": "deploy/nginx.conf",
+        "local_path": "%(deploy)s/nginx.conf",
         "remote_path": "/etc/nginx/sites-enabled/%(proj_name)s.conf",
         "reload_command": "service nginx restart",
     },
     "supervisor": {
-        "local_path": "deploy/supervisor.conf",
+        "local_path": "%(deploy)s/supervisor.conf",
         "remote_path": "/etc/supervisor/conf.d/%(proj_name)s.conf",
         "reload_command": "supervisorctl reload",
     },
     "cron": {
-        "local_path": "deploy/crontab",
+        "local_path": "%(deploy)s/crontab",
         "remote_path": "/etc/cron.d/%(proj_name)s",
         "owner": "root",
         "mode": "600",
     },
     "gunicorn": {
-        "local_path": "deploy/gunicorn.conf.py",
+        "local_path": "%(deploy)s/gunicorn.conf.py",
         "remote_path": "%(proj_path)s/gunicorn.conf.py",
     },
     "settings": {
-        "local_path": "deploy/live_settings.py",
+        "local_path": "%(deploy)s/live_settings.py",
         "remote_path": "%(proj_path)s/local_settings.py",
     },
 }
@@ -199,7 +202,11 @@ def vagrant_up():
     env.key_filename = vagrant_ssh['IdentityFile']
     env.forward_agent = True
     env.disable_known_hosts = True
-
+    env.venv_home = conf.get("VIRTUALENV_HOME", "/home/%s" % env.user)
+    env.venv_path = "%s/%s" % (env.venv_home, env.proj_name)
+    env.proj_path = "%s/%s" % (env.venv_path, env.proj_dirname)
+    env.manage = "%s/bin/python %s/project/manage.py" % (env.venv_path,
+                                                         env.venv_path)
 
 def vagrant_down():
     """
@@ -218,7 +225,7 @@ def vagrant_init():
     if os.path.exists(VAGRANTFILE):
         return
 
-    vagrant_proto = os.path.join("deploy", VAGRANTFILE)
+    vagrant_proto = os.path.join(env.deploy, VAGRANTFILE)
     with open(VAGRANTFILE, 'w') as f:
         f.write(open(vagrant_proto).read() % env)
 
@@ -534,8 +541,8 @@ def create():
         key_file = env.proj_name + ".key"
         if not exists(crt_file) and not exists(key_file):
             try:
-                crt_local, = glob(os.path.join("deploy", "*.crt"))
-                key_local, = glob(os.path.join("deploy", "*.key"))
+                crt_local, = glob(os.path.join(env.deploy, "*.crt"))
+                key_local, = glob(os.path.join(env.deploy, "*.key"))
             except ValueError:
                 parts = (crt_file, key_file, env.live_host)
                 sudo("openssl req -new -x509 -nodes -out %s -keyout %s "
