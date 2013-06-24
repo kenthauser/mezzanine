@@ -82,6 +82,7 @@ standard Django environment), with the following dependencies:
   * `pytz`_ - for timezone support
   * `South`_ - for database migrations (optional)
   * `django-compressor`_ - for merging JS/CSS assets (optional)
+  * `requests`_ and `requests-oauth`_ - for interacting with external APIs
   * `pyflakes`_ and `pep8`_ - for running the test suite (optional)
 
 Browser Support
@@ -406,7 +407,12 @@ Sites Using Mezzanine
   * `VerifIP <http://verifip.com/>`_
   * `Clic TV <http://www.clictv.tv/>`_
   * `JE Rivas <http://www.jerivas.com/>`_
-
+  * `Heather Gregory Nutrition <http://heathergregorynutrition.com>`_
+  * `Coronado Island Realty <http://coronado-realty.com>`_
+  * `Loans to Homes <http://loanstohomes.com>`_
+  * `Gensler Group <http://genslergroup.com>`_
+  * `SaniCo <https://sanimedicaltourism.com>`_
+  * `Grupo Invista <http://grupoinvista.com>`_
 
 Quotes
 ======
@@ -456,6 +462,8 @@ Quotes
 .. _`Grappelli`: http://code.google.com/p/django-grappelli/
 .. _`FileBrowser`: http://code.google.com/p/django-filebrowser/
 .. _`South`: http://south.aeracode.org/
+.. _`requests`: http://docs.python-requests.org/en/latest/
+.. _`requests-oauth`: https://github.com/maraujop/requests-oauth
 .. _`pyflakes`: http://pypi.python.org/pypi/pyflakes
 .. _`pep8`: http://pypi.python.org/pypi/pep8
 .. _`In-line page editing`: http://mezzanine.jupo.org/docs/inline-editing.html
