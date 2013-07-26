@@ -53,6 +53,8 @@ env.git = env.repo_url.startswith("git") or env.repo_url.endswith(".git")
 env.reqs_path = conf.get("REQUIREMENTS_PATH", None)
 env.gunicorn_port = conf.get("GUNICORN_PORT", 8000)
 env.locale = conf.get("LOCALE", "en_US.UTF-8")
+env.secret_key = conf.get("SECRET_KEY", "")
+env.nevercache_key = conf.get("NEVERCACHE_KEY", "")
 
 # updates for vagrant support
 env.deploy = os.path.join(settings_dir, "deploy")
@@ -359,8 +361,10 @@ def upload_template_and_reload(name):
     related service.
     """
     template = get_templates()[name]
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    local_path = os.path.join(project_root, template["local_path"])
+    local_path = template["local_path"]
+    if not os.path.exists(local_path):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        local_path = os.path.join(project_root, local_path)
     remote_path = template["remote_path"]
     reload_command = template.get("reload_command")
     owner = template.get("owner")

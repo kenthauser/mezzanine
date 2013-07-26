@@ -1,3 +1,8 @@
+try:
+    from urllib.parse import urljoin
+except ImportError:     # Python 2
+    from urlparse import urljoin
+
 from django.core.urlresolvers import resolve, reverse
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -54,8 +59,7 @@ class Page(BasePage):
         slug = self.slug
         if self.content_model == "link":
             # Ensure the URL is absolute.
-            if not slug.lower().startswith("http"):
-                slug = "/" + self.slug.lstrip("/")
+            slug = urljoin('/', slug)
             return slug
         if slug == "/":
             return reverse("home")
@@ -241,6 +245,7 @@ class Page(BasePage):
             parent_id = context["_parent_page_ids"].get(page_id)
             return self.id == page_id or (parent_id and is_c_or_a(parent_id))
         self.is_current_or_ascendant = lambda: bool(is_c_or_a(current_page_id))
+        self.is_current_parent = self.id == current_parent_id
         # Am I a primary page?
         self.is_primary = self.parent_id is None
         # What's an ID I can use in HTML?
