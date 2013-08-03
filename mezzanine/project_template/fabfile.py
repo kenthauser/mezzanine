@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from posixpath import join
 
 from fabric.api import env, cd, prefix, sudo as _sudo, run as _run, hide, task
-from fabric.api import local, execute
+from fabric.api import local, execute, put
 from fabric.contrib.files import exists, upload_template
 from fabric.colors import yellow, green, blue, red
 
@@ -23,8 +23,8 @@ if sys.argv[0].split(os.sep)[-1] in ("fab",             # POSIX
     # Ensure we import settings from the current dir
     try:
         dj_settings = __import__("settings", globals(), locals(), [], 0)
-	conf = dj_settings.FABRIC
-	settings_dir = os.path.dirname(dj_settings.__file__)
+        conf = dj_settings.FABRIC
+        settings_dir = os.path.dirname(dj_settings.__file__)
         try:
             conf.get("USE_VAGRANT") or conf["HOSTS"][0]
         except (KeyError, ValueError):
@@ -45,16 +45,14 @@ env.venv_home = conf.get("VIRTUALENV_HOME", "/home/%s" % env.user)
 env.venv_path = "%s/%s" % (env.venv_home, env.proj_name)
 env.proj_dirname = "project"
 env.proj_path = "%s/%s" % (env.venv_path, env.proj_dirname)
-env.manage = "%s/bin/python %s/project/manage.py" % (env.venv_path,
-                                                     env.venv_path)
+env.static_path = "%s/src/%s" % (env.proj_path, env.proj_name)
+env.manage = "%s/project/bin/django" % env.venv_path
 env.live_host = conf.get("LIVE_HOSTNAME", env.hosts[0] if env.hosts else None)
 env.repo_url = conf.get("REPO_URL", "")
 env.git = env.repo_url.startswith("git") or env.repo_url.endswith(".git")
 env.reqs_path = conf.get("REQUIREMENTS_PATH", None)
 env.gunicorn_port = conf.get("GUNICORN_PORT", 8000)
 env.locale = conf.get("LOCALE", "en_US.UTF-8")
-env.secret_key = conf.get("SECRET_KEY", "")
-env.nevercache_key = conf.get("NEVERCACHE_KEY", "")
 
 # updates for vagrant support
 env.deploy = os.path.join(settings_dir, "deploy")
@@ -94,7 +92,7 @@ templates = {
     },
     "settings": {
         "local_path": "%(deploy)s/live_settings.py",
-        "remote_path": "%(proj_path)s/local_settings.py",
+        "remote_path": "%(proj_path)s/src/%(proj_name)s/local_settings.py",
     },
 }
 
@@ -209,8 +207,9 @@ def vagrant_up():
     env.venv_home = conf.get("VIRTUALENV_HOME", "/home/%s" % env.user)
     env.venv_path = "%s/%s" % (env.venv_home, env.proj_name)
     env.proj_path = "%s/%s" % (env.venv_path, env.proj_dirname)
-    env.manage = "%s/bin/python %s/project/manage.py" % (env.venv_path,
-                                                         env.venv_path)
+    env.static_path = "%s/src/%s" % (env.proj_path, env.proj_name)
+    env.manage = "%s/project/bin/django" % env.venv_path
+
 
 def vagrant_down():
     """
@@ -221,17 +220,16 @@ def vagrant_down():
 
 VAGRANTFILE = "Vagrantfile"
 
+
 def vagrant_init():
     """
     Create Vagrantfile from prototype if required
     """
+    if not os.path.exists(VAGRANTFILE):
+        vagrant_proto = os.path.join(env.deploy, VAGRANTFILE)
+        with open(VAGRANTFILE, 'w') as f:
+            f.write(open(vagrant_proto).read() % env)
 
-    if os.path.exists(VAGRANTFILE):
-        return
-
-    vagrant_proto = os.path.join(env.deploy, VAGRANTFILE)
-    with open(VAGRANTFILE, 'w') as f:
-        f.write(open(vagrant_proto).read() % env)
 
 def vagrant_destroy():
     """
@@ -241,6 +239,7 @@ def vagrant_destroy():
         with hide('running'):
             local('vagrant destroy -f')
         os.unlink(VAGRANTFILE)
+
 
 def vagrant_get_ssh_config(host=None):
         """
@@ -256,11 +255,12 @@ def vagrant_get_ssh_config(host=None):
         # convert text to dict
         status = {}
         for line in result.splitlines():
-            k,v = line.split(None, 1)
+            k, v = line.split(None, 1)
             if v[0] in '\'"' and v[0] == v[-1]:
                 v = v[1:-1]
             status[k] = v
         return status
+
 
 def vagrant_get_status_dict():
     """Return status of vagrant machine(s) as dictonary"""
@@ -362,9 +362,6 @@ def upload_template_and_reload(name):
     """
     template = get_templates()[name]
     local_path = template["local_path"]
-    if not os.path.exists(local_path):
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        local_path = os.path.join(project_root, local_path)
     remote_path = template["remote_path"]
     reload_command = template.get("reload_command")
     owner = template.get("owner")
@@ -458,8 +455,8 @@ def python(code, show=True):
     """
     Runs Python code in the project's virtual environment, with Django loaded.
     """
-    setup = "import os; os.environ[\'DJANGO_SETTINGS_MODULE\']=\'settings\';"
-    full_code = 'python -c "%s%s"' % (setup, code.replace("`", "\\\`"))
+    setup = "import os; os.environ[\'DJANGO_SETTINGS_MODULE\']=\'%s.settings\';" % env.proj_name
+    full_code = 'bin/python -c "%s%s"' % (setup, code.replace("`", "\\\`"))
     with project():
         result = run(full_code, show=False)
         if show:
@@ -524,8 +521,15 @@ def create():
                 print "\nAborting!"
                 return False
             remove()
-        run("virtualenv %s --distribute" % env.proj_name)
-        vcs = "git" if env.git else "hg"
+        run("virtualenv %s" % env.proj_name)
+
+        from StringIO import StringIO
+        put(StringIO(
+            '#!/bin/sh\n'
+            'exec /usr/bin/ssh -o StrictHostKeyChecking=no $*\n'
+            ), '%s/git_ssh' % env.venv_path, mode=0775)
+
+        vcs = "GIT_SSH=%s/git_ssh git" %  env.venv_path if env.git else "hg"
         run("%s clone %s %s" % (vcs, env.repo_url, env.proj_path))
 
     # Create DB and DB user.
@@ -565,6 +569,8 @@ def create():
             pip("-r %s/%s" % (env.proj_path, env.reqs_path))
         pip("gunicorn setproctitle south psycopg2 "
             "django-compressor python-memcached")
+        run("%s/bin/python bootstrap.py" % env.venv_path)
+        run("bin/buildout")
         manage("createdb --noinput --nodata")
         python("from django.conf import settings;"
                "from django.contrib.sites.models import Site;"
