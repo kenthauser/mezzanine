@@ -18,8 +18,12 @@ from django.template import (Context, Node, TextNode, Template,
 from django.template.defaultfilters import escape
 from django.template.loader import get_template
 from django.utils.html import strip_tags
-from django.utils.simplejson import loads
 from django.utils.text import capfirst
+
+try:
+    from json import loads
+except ImportError:  # Python < 2.6
+    from django.utils.simplejson import loads
 
 # Try to import PIL in either of the two ways it can end up installed.
 try:
@@ -200,7 +204,7 @@ def gravatar_url(email, size=32):
     """
     Return the full URL for a Gravatar given an email hash.
     """
-    bits = (md5(email.lower()).hexdigest(), size)
+    bits = (md5(email.lower().encode("utf-8")).hexdigest(), size)
     return "//www.gravatar.com/avatar/%s?s=%s&d=identicon&r=PG" % bits
 
 
@@ -425,7 +429,7 @@ def editable(parsed, context, token):
         obj = fields[0][0]
         if isinstance(obj, Model) and is_editable(obj, context["request"]):
             field_names = ",".join([f[1] for f in fields])
-            context["form"] = get_edit_form(obj, field_names)
+            context["editable_form"] = get_edit_form(obj, field_names)
             context["original"] = parsed
             t = get_template("includes/editable_form.html")
             return t.render(Context(context))
