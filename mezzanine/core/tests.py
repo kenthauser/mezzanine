@@ -1,8 +1,18 @@
+from __future__ import unicode_literals
+
+try:
+    # Python 3
+    from urllib.parse import urlencode
+except ImportError:
+    # Python 2
+    from urllib import urlencode
 
 from django.contrib.sites.models import Site
+from django.templatetags.static import static
 from django.core.urlresolvers import reverse
 from django.utils.html import strip_tags
 from django.utils.unittest import skipUnless
+from django.test.utils import override_settings
 
 from mezzanine.conf import settings
 from mezzanine.core.managers import DisplayableManager
@@ -88,10 +98,10 @@ class CoreTests(TestCase):
         self.client.logout()
         draft = RichTextPage.objects.create(title="Draft",
                                             status=CONTENT_STATUS_DRAFT)
-        response = self.client.get(draft.get_absolute_url())
+        response = self.client.get(draft.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 404)
         self.client.login(username=self._username, password=self._password)
-        response = self.client.get(draft.get_absolute_url())
+        response = self.client.get(draft.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
 
     def test_searchable_manager_search_fields(self):
@@ -160,7 +170,7 @@ class CoreTests(TestCase):
         # test response status code
         code = 200 if status == CONTENT_STATUS_PUBLISHED else 404
         pages = RichTextPage.objects.filter(status=status)
-        response = self.client.get(pages[0].get_absolute_url())
+        response = self.client.get(pages[0].get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, code)
 
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS,
@@ -190,7 +200,7 @@ class CoreTests(TestCase):
         self._test_site_pages("Site2", CONTENT_STATUS_PUBLISHED, count=1)
 
         # original page should 404
-        response = self.client.get(site1_page.get_absolute_url())
+        response = self.client.get(site1_page.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 404)
 
         # change back to site1, and only the site1 pages should be retrieved
@@ -219,3 +229,26 @@ class CoreTests(TestCase):
 
         site1.delete()
         site2.delete()
+
+    def _static_proxy(self, querystring):
+        self.client.login(username=self._username, password=self._password)
+        proxy_url = '%s?%s' % (reverse('static_proxy'), querystring)
+        response = self.client.get(proxy_url)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(STATIC_URL='/static/')
+    def test_static_proxy(self):
+        querystring = urlencode([('u', static("test/image.jpg"))])
+        self._static_proxy(querystring)
+
+    @override_settings(STATIC_URL='http://testserver/static/')
+    def test_static_proxy_with_host(self):
+        querystring = urlencode(
+            [('u', static("test/image.jpg"))])
+        self._static_proxy(querystring)
+
+    @override_settings(STATIC_URL='http://testserver:8000/static/')
+    def test_static_proxy_with_static_url_with_full_host(self):
+        from django.templatetags.static import static
+        querystring = urlencode([('u', static("test/image.jpg"))])
+        self._static_proxy(querystring)

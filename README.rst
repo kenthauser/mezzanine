@@ -45,7 +45,7 @@ interface, Mezzanine provides the following:
 * Tagging
 * `Themes Marketplace`_
 * User accounts and profiles with email verification
-* Translated to over 20 languages
+* Translated to over 35 languages
 * Sharing via Facebook or Twitter
 * `Custom templates`_ per page or blog post
 * `Twitter Bootstrap`_ integration
@@ -74,13 +74,13 @@ Dependencies
 Mezzanine makes use of as few libraries as possible (apart from a
 standard Django environment), with the following dependencies:
 
-* `Python`_ 2.6 / 2.7
-* `Django`_ 1.4 / 1.5
+* `Python`_ 2.6 / 2.7 / 3.3
+* `Django`_ 1.4 / 1.5 / 1.6
 * `Python Imaging Library`_ - for image resizing
 * `grappelli-safe`_ - admin skin (`Grappelli`_ fork)
 * `filebrowser-safe`_ - for managing file uploads (`FileBrowser`_ fork)
 * `bleach`_ - for sanitizing markup in content
-* `pytz`_ - for timezone support
+* `pytz`_ and `tzlocal`_ - for timezone support
 * `South`_ - for database migrations (optional)
 * `django-compressor`_ - for merging JS/CSS assets (optional)
 * `requests`_ and `requests-oauth`_ - for interacting with external APIs
@@ -235,11 +235,22 @@ You can also add modules to the `Mezzanine Grid on djangopackages.com`_.
   them over RSS.
 * `cash-generator`_ - Generate `GnuCash`_ invoices with Mezzanine.
 * `mezzanine-foundation`_ - `Zurb Foundation`_ theme for Mezzanine.
-* `mezzanine-file-collections`_ - Simple file collection page type for Mezzanine.
+* `mezzanine-file-collections`_ - Simple file collection page type
+  for Mezzanine.
 * `mezzanine-wymeditor`_ - `WYMeditor`_ adapted as the rich text
   editor for Mezzanine.
 * `mezzanine-meze`_ - Adds support for `reStructuredText`_,
   `Pygments`_ and more, to Mezzanine's rich text editing.
+* `mezzanine-pageimages`_ - Add background and banner images per page
+  in Mezzanine.
+* `mezzanine-protected-pages`_ - Restrict access to pages by group
+  membership.
+* `mezzanine-page-auth`_ - A Mezzanine module for add group-level
+  permission to pages.
+* `django-widgy`_ - Widget-oriented content editing. Includes an adapter for
+  Mezzanine and a powerful form builder.
+* `mezzanine-admin-backup`_ - Export your Mezzanine database and assets directly from the admin.
+* `mezzanine-mailchimp`_ - Integrate Mezzanine forms with a MailChimp subscription list.
 
 Donating
 ========
@@ -320,7 +331,6 @@ Sites Using Mezzanine
 * `Raymond Chandler <http://www.codearchaeologist.org>`_
 * `Nashsb <http://nashpp.com>`_
 * `AciBASE <http://acinetobacter.bham.ac.uk>`_
-* `Enrico Tröger <http://www.uvena.de>`_
 * `Matthe Wahn <http://www.matthewahn.com>`_
 * `Bit of Pixels <http://bitofpixels.com>`_
 * `European Crystallographic Meeting <http://ecm29.ecanews.org>`_
@@ -332,7 +342,7 @@ Sites Using Mezzanine
 * `Pageworthy <http://pageworthy.com>`_
 * `Prince Jets <http://princejets.com>`_
 * `30 sites in 30 days <http://1inday.com>`_
-* `St Barnabas' Theological College <http://www.sbtc.org.au>`_
+* `St Barnabas' Theological College <http://www.sbtc.org.au/>`_
 * `Helios 3D <http://helios3d.nl/>`_
 * `Life is Good <http://lifeisgoodforall.co.uk/>`_
 * `Building 92 <http://bldg92.org/>`_
@@ -420,7 +430,43 @@ Sites Using Mezzanine
 * `SaniCo <https://sanimedicaltourism.com>`_
 * `Grupo Invista <http://grupoinvista.com>`_
 * `Brooklyn Navy Yard <http://brooklynnavyyard.org/>`_
-* `MEZZaTHEME <http://mezzathe.me>`_
+* `MEZZaTHEME <http://mezzathe.me/>`_
+* `Nektra Advanced Computing <http://www.nektra.com/>`_
+* `Bootstrap ASAP <https://bootstrapasap.com/>`_
+* `California Center for Jobs <http://www.centerforjobs.org/>`_
+* `Sam Kingston <http://www.sjkingston.com>`_
+* `Code Juggle DJ <http://www.codejuggle.dj>`_
+* `Food News <http://food.hypertexthero.com>`_
+* `Australian Discworld Conventions <http://ausdwcon.org>`_
+* `Distilled <http://www.distilled.net/>`_
+* `OpenMRP <http://www.openmrp.es>`_
+* `Arkade Snowboarding <http://www.arkadesnowboarding.com/>`_
+* `Linktective The Link Checker <http://www.linktective.com>`_
+* `Zetalab <http://www.zetalab.de>`_
+* `Make-Up Artists & Hair Stylists Guild <http://www.local706.org>`_
+* `Anywhereism <http://www.anywhereism.net>`_
+* `Assistive Listening Device Locator <http://aldlocator.com>`_
+* `Frank & Connie Spitzer <http://sdhome4you.com>`_
+* `Coronado Unified School District <http://coronadousd.net>`_
+* `Coronado Inn <http://coronadoinn.com>`_
+* `Coronado Schools Foundation <http://csfkids.org>`_
+* `Light and Life Christian School <http://www.lightandlifechristianschool.com>`_
+* `The Morabito Group <http://themorabitogroup.com>`_
+* `Law Offices of Nancy Gardner <http://nancygardnerlaw.com>`_
+* `Soden & Steinberger APLC <http://legalmattersllp.com>`_
+* `Stalwart Communications <http://stalwartcom.com>`_
+* `Ubuntu Consultants <http://ubuntuconsultants.com>`_
+* `Wine a Bit Coronado <http://wineabitcoronado.com>`_
+* `Mercury Mastering <http://mercurymastering.com>`_
+* `Flowgrammable <http://flowgrammable.org>`_
+* `Shibe Mart <http://shibemart.com>`_
+* `Carlos Isaac Balderas <http://caisbalderas.com/>`_
+* `Enrico Tröger <http://www.pending.io>`_
+* `Perugini <http://peruginicase.it/>`_
+* `YouPatch <https://www.youpatch.com>`_
+* `Batista Peniel <http://batistapeniel.org>`_
+* `Perceptyx <http://www.perceptyx.com/>`_
+
 
 Quotes
 ======
@@ -464,6 +510,7 @@ Quotes
 .. _`pip`: http://www.pip-installer.org/
 .. _`bleach`: http://pypi.python.org/pypi/bleach
 .. _`pytz`: http://pypi.python.org/pypi/pytz/
+.. _`tzlocal`: http://pypi.python.org/pypi/tzlocal/
 .. _`django-compressor`: https://pypi.python.org/pypi/django_compressor
 .. _`Python Imaging Library`: http://www.pythonware.com/products/pil/
 .. _`grappelli-safe`: http://github.com/stephenmcd/grappelli-safe
@@ -485,7 +532,7 @@ Quotes
 .. _`test suite`: http://mezzanine.jupo.org/docs/packages.html#module-mezzanine.core.tests
 .. _`JVM`: http://en.wikipedia.org/wiki/Java_virtual_machine
 .. _`Jython`: http://www.jython.org/
-.. _`Twitter Bootstrap`: http://twitter.github.com/bootstrap/
+.. _`Twitter Bootstrap`: http://getbootstrap.com/
 .. _`Disqus`: http://disqus.com/
 .. _`Gravatar`: http://gravatar.com/
 .. _`Google Analytics`: http://www.google.com/analytics/
@@ -498,7 +545,7 @@ Quotes
 .. _`mezzanine-users`: http://groups.google.com/group/mezzanine-users/topics
 .. _`security@jupo.org`: mailto:security@jupo.org?subject=Mezzanine+Security+Issue
 .. _`GitHub issue tracker`: http://github.com/stephenmcd/mezzanine/issues
-.. _`#mezzanine IRC channel`: irc://freenode.net/mezzanine
+.. _`#mezzanine IRC channel`: irc://irc.freenode.net/mezzanine
 .. _`Freenode`: http://freenode.net
 .. _`Django coding style`: http://docs.djangoproject.com/en/dev/internals/contributing/#coding-style
 .. _`PEP 8`: http://www.python.org/dev/peps/pep-0008/
@@ -563,6 +610,12 @@ Quotes
 .. _`mezzanine-meze`: https://github.com/abakan/mezzanine-meze
 .. _`reStructuredText`: http://docutils.sourceforge.net/rst.html
 .. _`Pygments`: http://pygments.org/
+.. _`mezzanine-pageimages`: https://github.com/bcs-de/mezzanine-pageimages
+.. _`mezzanine-protected-pages`: https://github.com/evilchili/mezzanine-protected-pages
+.. _`mezzanine-page-auth`: https://github.com/simodalla/mezzanine_page_auth
+.. _`django-widgy`: http://django-widgy.readthedocs.org/en/latest/
+.. _`mezzanine-admin-backup`: https://bitbucket.org/joshcartme/mezzanine-admin-backup
+.. _`mezzanine-mailchimp`: https://bitbucket.org/naritasltda/mezzanine-mailchimp
 
 
 .. PEOPLE WITH QUOTES

@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+
+from future.utils import native_str
 
 from django.contrib import admin
 from django.contrib.auth import logout
@@ -16,6 +19,7 @@ from mezzanine.utils.cache import (cache_key_prefix, nevercache_token,
                                    cache_get, cache_set, cache_installed)
 from mezzanine.utils.device import templates_for_device
 from mezzanine.utils.sites import current_site_id, templates_for_host
+from mezzanine.utils.urls import next_url
 
 
 _deprecated = {
@@ -35,7 +39,9 @@ class _Deprecated(object):
         warn(msg)
 
 for old, new in _deprecated.items():
-    globals()[old] = type(old, (_Deprecated,), {"old": old, "new": new})
+    globals()[old] = type(native_str(old),
+                          (_Deprecated,),
+                          {"old": old, "new": new})
 
 
 class AdminLoginInterfaceSelectorMiddleware(object):
@@ -51,7 +57,7 @@ class AdminLoginInterfaceSelectorMiddleware(object):
                 if login_type == "admin":
                     next = request.get_full_path()
                 else:
-                    next = request.GET.get("next") or "/"
+                    next = next_url(request) or "/"
                 return HttpResponseRedirect(next)
             else:
                 return response
@@ -90,8 +96,10 @@ class TemplateForDeviceMiddleware(object):
     """
     def process_template_response(self, request, response):
         if hasattr(response, "template_name"):
-            templates = templates_for_device(request, response.template_name)
-            response.template_name = templates
+            if not isinstance(response.template_name, Template):
+                templates = templates_for_device(request,
+                    response.template_name)
+                response.template_name = templates
         return response
 
 
@@ -101,8 +109,10 @@ class TemplateForHostMiddleware(object):
     """
     def process_template_response(self, request, response):
         if hasattr(response, "template_name"):
-            templates = templates_for_host(request, response.template_name)
-            response.template_name = templates
+            if not isinstance(response.template_name, Template):
+                templates = templates_for_host(request,
+                    response.template_name)
+                response.template_name = templates
         return response
 
 
@@ -139,8 +149,14 @@ class UpdateCacheMiddleware(object):
         # content. Split on the delimiter the ``nevercache`` tag
         # wrapped its contents in, and render only the content
         # enclosed by it, to avoid possible template code injection.
-        parts = response.content.split(nevercache_token())
-        if response["content-type"].startswith("text") and len(parts) > 1:
+        token = nevercache_token()
+        try:
+            token = token.encode('utf-8')
+        except AttributeError:
+            pass
+        parts = response.content.split(token)
+        content_type = response.get("content-type", "")
+        if content_type.startswith("text") and len(parts) > 1:
             # Restore csrf token from cookie - check the response
             # first as it may be being set for the first time.
             csrf_token = None
@@ -158,7 +174,7 @@ class UpdateCacheMiddleware(object):
                 if i % 2:
                     part = Template(part).render(context).encode("utf-8")
                 parts[i] = part
-            response.content = "".join(parts)
+            response.content = b"".join(parts)
             response["Content-Length"] = len(response.content)
             if hasattr(request, '_messages'):
                 # Required to clear out user messages.
