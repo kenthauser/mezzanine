@@ -1,20 +1,23 @@
 from __future__ import unicode_literals
-
 from future.utils import native_str
 
 from django.contrib import admin
 from django.contrib.auth import logout
+from django.contrib.messages import error
 from django.contrib.redirects.models import Redirect
 from django.core.exceptions import MiddlewareNotUsed
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, resolve
 from django.http import (HttpResponse, HttpResponseRedirect,
                          HttpResponsePermanentRedirect, HttpResponseGone)
-from django.utils.cache import get_max_age
-from django.template import Template, RequestContext
 from django.middleware.csrf import CsrfViewMiddleware, get_token
+from django.template import Template, RequestContext
+from django.utils.cache import get_max_age
+from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext as _
 
 from mezzanine.conf import settings
 from mezzanine.core.models import SitePermission
+from mezzanine.core.management import DEFAULT_USERNAME, DEFAULT_PASSWORD
 from mezzanine.utils.cache import (cache_key_prefix, nevercache_token,
                                    cache_get, cache_set, cache_installed)
 from mezzanine.utils.device import templates_for_device
@@ -56,6 +59,13 @@ class AdminLoginInterfaceSelectorMiddleware(object):
             if request.user.is_authenticated():
                 if login_type == "admin":
                     next = request.get_full_path()
+                    if (request.user.username == DEFAULT_USERNAME and
+                            request.user.check_password(DEFAULT_PASSWORD)):
+                        error(request, mark_safe(_(
+                              "Your account is using the default password, "
+                              "please <a href='%s'>change it</a> immediately.")
+                              % reverse("user_change_password",
+                                        args=(request.user.id,))))
                 else:
                     next = next_url(request) or "/"
                 return HttpResponseRedirect(next)
@@ -221,16 +231,31 @@ class SSLRedirectMiddleware(object):
     def process_request(self, request):
         settings.use_editable()
         force_host = settings.SSL_FORCE_HOST
+        response = None
         if force_host and request.get_host().split(":")[0] != force_host:
             url = "http://%s%s" % (force_host, request.get_full_path())
-            return HttpResponsePermanentRedirect(url)
-        if settings.SSL_ENABLED and not settings.DEV_SERVER:
+            response = HttpResponsePermanentRedirect(url)
+        elif settings.SSL_ENABLED and not settings.DEV_SERVER:
             url = "%s%s" % (request.get_host(), request.get_full_path())
             if request.path.startswith(settings.SSL_FORCE_URL_PREFIXES):
                 if not request.is_secure():
-                    return HttpResponseRedirect("https://%s" % url)
+                    response = HttpResponseRedirect("https://%s" % url)
             elif request.is_secure() and settings.SSL_FORCED_PREFIXES_ONLY:
-                return HttpResponseRedirect("http://%s" % url)
+                response = HttpResponseRedirect("http://%s" % url)
+        if response and request.method == "POST":
+            if resolve(request.get_full_path()).url_name == "fb_do_upload":
+                # The handler for the flash file uploader in filebrowser
+                # doesn't have access to the http headers Django will use
+                # to determine whether the request is secure or not, so
+                # in this case we don't attempt a redirect - note that
+                # when /admin is restricted to SSL using Mezzanine's SSL
+                # setup, the flash uploader will post over SSL, so
+                # someone would need to explictly go out of their way to
+                # trigger this.
+                return
+            # Tell the client they need to re-POST.
+            response.status_code = 307
+        return response
 
 
 class RedirectFallbackMiddleware(object):

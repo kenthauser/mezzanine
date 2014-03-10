@@ -5,7 +5,7 @@ import sys
 from warnings import warn
 
 from django.conf import global_settings as defaults
-from django.template.loader import add_to_builtins
+from django.template.base import add_to_builtins
 
 from mezzanine.utils.timezone import get_best_local_timezone
 
@@ -70,9 +70,10 @@ def set_dynamic_settings(s):
     s.setdefault("AUTHENTICATION_BACKENDS", defaults.AUTHENTICATION_BACKENDS)
     s.setdefault("STATICFILES_FINDERS", defaults.STATICFILES_FINDERS)
     tuple_list_settings = ["AUTHENTICATION_BACKENDS", "INSTALLED_APPS",
-                           "MIDDLEWARE_CLASSES", "STATICFILES_FINDERS"]
+                           "MIDDLEWARE_CLASSES", "STATICFILES_FINDERS",
+                           "LANGUAGES"]
     for setting in tuple_list_settings[:]:
-        if not isinstance(s[setting], list):
+        if not isinstance(s.get(setting, []), list):
             s[setting] = list(s[setting])
         else:
             # Setting is already a list, so we'll exclude it from
@@ -146,8 +147,6 @@ def set_dynamic_settings(s):
         s["GRAPPELLI_INSTALLED"] = False
     else:
         s["GRAPPELLI_INSTALLED"] = True
-        s.setdefault("GRAPPELLI_ADMIN_HEADLINE", "Mezzanine")
-        s.setdefault("GRAPPELLI_ADMIN_TITLE", "Mezzanine")
 
     # Ensure admin is last in the app order so that admin templates
     # are loaded in the correct order.
@@ -174,6 +173,13 @@ def set_dynamic_settings(s):
         s["MIDDLEWARE_CLASSES"] = [mw for mw in s["MIDDLEWARE_CLASSES"] if not
                                    (mw.endswith("UpdateCacheMiddleware") or
                                     mw.endswith("FetchFromCacheMiddleware"))]
+
+    # If only LANGUAGE_CODE has been defined, ensure the other required
+    # settings for translations are configured.
+    if (s.get("LANGUAGE_CODE") and len(s.get("LANGUAGES", [])) == 1 and
+            s["LANGUAGE_CODE"] != s["LANGUAGES"][0][0]):
+        s["USE_I18N"] = True
+        s["LANGUAGES"] = [(s["LANGUAGE_CODE"], "")]
 
     # Revert tuple settings back to tuples.
     for setting in tuple_list_settings:

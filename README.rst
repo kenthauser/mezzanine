@@ -76,7 +76,7 @@ standard Django environment), with the following dependencies:
 
 * `Python`_ 2.6 / 2.7 / 3.3
 * `Django`_ 1.4 / 1.5 / 1.6
-* `Python Imaging Library`_ - for image resizing
+* `Pillow`_ - for image resizing (`Python Imaging Library`_ fork)
 * `grappelli-safe`_ - admin skin (`Grappelli`_ fork)
 * `filebrowser-safe`_ - for managing file uploads (`FileBrowser`_ fork)
 * `bleach`_ - for sanitizing markup in content
@@ -85,6 +85,16 @@ standard Django environment), with the following dependencies:
 * `django-compressor`_ - for merging JS/CSS assets (optional)
 * `requests`_ and `requests-oauth`_ - for interacting with external APIs
 * `pyflakes`_ and `pep8`_ - for running the test suite (optional)
+
+Users on Debian or Ubuntu will require some system packages to support
+the imaging library::
+
+    $ apt-get install libjpeg8 libjpeg8-dev
+    $ apt-get build-dep python-imaging
+
+OSX users can do the same via `Homebrew`_::
+
+    $ brew install libjpeg
 
 Browser Support
 ===============
@@ -147,9 +157,11 @@ back your enhancements.
 
 Please note the following guidelines for contributing:
 
-* Contributed code must be written in the existing style. This is
-  as simple as following the `Django coding style`_ and (most
-  importantly) `PEP 8`_.
+* Contributed code must be written in the existing style. For Python
+  (and to a decent extent, JavaScript as well), this is as simple as
+  following the `Django coding style`_ and (most importantly)
+  `PEP 8`_. Front-end CSS should adhere to the
+  `Bootstrap CSS guidelines`_.
 * Contributions must be available on a separately named branch
   based on the latest version of the main branch.
 * Run the tests before committing your changes. If your changes
@@ -251,6 +263,9 @@ You can also add modules to the `Mezzanine Grid on djangopackages.com`_.
   Mezzanine and a powerful form builder.
 * `mezzanine-admin-backup`_ - Export your Mezzanine database and assets directly from the admin.
 * `mezzanine-mailchimp`_ - Integrate Mezzanine forms with a MailChimp subscription list.
+* `mezzanine-grappelli`_ - Integrates latest upstream grappelli/filebrowser with Mezzanine.
+* `mezzanine-workout`_ - Store and display FIT data in Mezzanine.
+
 
 Donating
 ========
@@ -466,6 +481,8 @@ Sites Using Mezzanine
 * `YouPatch <https://www.youpatch.com>`_
 * `Batista Peniel <http://batistapeniel.org>`_
 * `Perceptyx <http://www.perceptyx.com/>`_
+* `Guddina Coffee <http://guddina.com>`_
+* `Atami Escape Resort <http://www.atami.com.sv>`_
 
 
 Quotes
@@ -513,6 +530,7 @@ Quotes
 .. _`tzlocal`: http://pypi.python.org/pypi/tzlocal/
 .. _`django-compressor`: https://pypi.python.org/pypi/django_compressor
 .. _`Python Imaging Library`: http://www.pythonware.com/products/pil/
+.. _`Pillow`: https://github.com/python-imaging/Pillow
 .. _`grappelli-safe`: http://github.com/stephenmcd/grappelli-safe
 .. _`filebrowser-safe`: http://github.com/stephenmcd/filebrowser-safe/
 .. _`Grappelli`: http://code.google.com/p/django-grappelli/
@@ -522,6 +540,7 @@ Quotes
 .. _`requests-oauth`: https://github.com/maraujop/requests-oauth
 .. _`pyflakes`: http://pypi.python.org/pypi/pyflakes
 .. _`pep8`: http://pypi.python.org/pypi/pep8
+.. _`Homebrew`: http://mxcl.github.com/homebrew/
 .. _`In-line page editing`: http://mezzanine.jupo.org/docs/inline-editing.html
 .. _`custom content types`: http://mezzanine.jupo.org/docs/content-architecture.html#creating-custom-content-types
 .. _`Search engine and API`: http://mezzanine.jupo.org/docs/search-engine.html
@@ -549,6 +568,7 @@ Quotes
 .. _`Freenode`: http://freenode.net
 .. _`Django coding style`: http://docs.djangoproject.com/en/dev/internals/contributing/#coding-style
 .. _`PEP 8`: http://www.python.org/dev/peps/pep-0008/
+.. _`Bootstrap CSS guidelines`: https://github.com/twbs/bootstrap/blob/master/CONTRIBUTING.md#css
 .. _`Transiflex`: https://www.transifex.net/projects/p/mezzanine/
 .. _`Mezzanine Grid on djangopackages.com`: http://www.djangopackages.com/grids/g/mezzanine/
 .. _`Django's internationalization`: https://docs.djangoproject.com/en/dev/topics/i18n/translation/
@@ -615,8 +635,9 @@ Quotes
 .. _`mezzanine-page-auth`: https://github.com/simodalla/mezzanine_page_auth
 .. _`django-widgy`: http://django-widgy.readthedocs.org/en/latest/
 .. _`mezzanine-admin-backup`: https://bitbucket.org/joshcartme/mezzanine-admin-backup
-.. _`mezzanine-mailchimp`: https://bitbucket.org/naritasltda/mezzanine-mailchimp
-
+.. _`mezzanine-mailchimp`: https://bitbucket.org/naritas/mezzanine-mailchimp
+.. _`mezzanine-grappelli`: https://github.com/sephii/mezzanine-grappelli
+.. _`mezzanine-workout`: https://github.com/kampfschlaefer/mezzanine-workout
 
 .. PEOPLE WITH QUOTES
 
